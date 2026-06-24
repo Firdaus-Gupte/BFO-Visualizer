@@ -13,7 +13,9 @@
       rel="stylesheet"
     />
 
-    <link rel="stylesheet" href="styles.css" />
+    <!-- ?v=… is a cache-buster: bump it whenever assets change so browsers /
+         GitHub Pages' CDN fetch the new file instead of a stale cached copy. -->
+    <link rel="stylesheet" href="styles.css?v=5578171" />
   </head>
   <body>
     <!-- ===================== Top bar ===================== -->
@@ -76,6 +78,15 @@
       <div id="info-content"></div>
     </aside>
 
+    <!-- Build marker: lets us confirm GitHub Pages is serving the latest deploy.
+         Inline-styled so it shows even if styles.css is cached. -->
+    <div
+      id="build-tag"
+      style="position: fixed; bottom: 6px; right: 10px; z-index: 50; font: 11px/1 ui-monospace, monospace; color: #b6bcc8; pointer-events: none; user-select: none;"
+    >
+      Build: 5578171
+    </div>
+
     <!-- ===================== Scripts ===================== -->
     <!-- D3 from CDN (only external dependency; used for circle packing + transitions). -->
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -83,10 +94,10 @@
     <!-- Data: the full extracted ontology (sets window.REAL_ONTOLOGY) and a
          small hand-curated fallback (sets window.SAMPLE_ONTOLOGY). app.js picks
          REAL_ONTOLOGY if present, otherwise SAMPLE_ONTOLOGY. -->
-    <script src="sample-data.js"></script>
-    <script src="ontology-data.js"></script>
+    <script src="sample-data.js?v=5578171"></script>
+    <script src="ontology-data.js?v=5578171"></script>
 
     <!-- The application logic. -->
-    <script src="app.js"></script>
+    <script src="app.js?v=5578171"></script>
   </body>
 </html>

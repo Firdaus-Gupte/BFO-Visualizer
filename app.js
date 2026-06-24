@@ -25,6 +25,11 @@
 (function () {
   "use strict";
 
+  // Build marker — logged on load so we can confirm (via the browser console)
+  // that GitHub Pages is serving the latest deployed code, not a cached copy.
+  const BUILD = "5578171";
+  console.log("BFO/CCO Visualizer — Build: " + BUILD);
+
   // ---------- 1. Data selection & config ----------
 
   // Prefer the full auto-generated ontology; fall back to the small sample.
