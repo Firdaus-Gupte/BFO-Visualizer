@@ -2,7 +2,7 @@
 
 A clean, beautiful, **pedagogical** browser for exploring the
 [Basic Formal Ontology (BFO)](https://basic-formal-ontology.org/) and the
-[Common Core Ontologies (CCO)](https://github.com/CommonCoreOntology/CommonCoreOntologies).
+[Common Core Ontologies (CCO)](https://github.com/CommonCoreOntology/CommonCoreOntologies), built using Claude Code.
 
 Most ontology tools are dense, arrow-filled graphs that overwhelm a learner.
 This one does the opposite: it uses **nested circles** (circle packing) as the
