@@ -27,7 +27,7 @@
 
   // Build marker — logged on load so we can confirm (via the browser console)
   // that GitHub Pages is serving the latest deployed code, not a cached copy.
-  const BUILD = "5578171";
+  const BUILD = "5578171-2";
   console.log("BFO/CCO Visualizer — Build: " + BUILD);
 
   // ---------- 1. Data selection & config ----------
@@ -200,9 +200,17 @@
       .select("#viz")
       .attr("viewBox", [-DIAM / 2, -DIAM / 2, DIAM, DIAM])
       .attr("preserveAspectRatio", "xMidYMid meet")
-      .on("click", () => {
-        // Background click → zoom out to parent.
-        if (focus && focus.parent) goTo(focus.parent);
+      .on("click", (event) => {
+        // Background click → go up one level, but ONLY when the pointer is
+        // OUTSIDE the focused circle. Clicking empty space INSIDE the focus
+        // circle should keep the current focus. (Clicks on child/leaf circles
+        // call stopPropagation, so they never reach this handler.)
+        if (!focus || !focus.parent) return;
+        const [mx, my] = d3.pointer(event, viewport.node());
+        const cx = (focus.x - currentView[0]) * currentK;
+        const cy = (focus.y - currentView[1]) * currentK;
+        const rr = focus.r * currentK;
+        if (Math.hypot(mx - cx, my - cy) > rr) goTo(focus.parent);
       });
 
     viewport = svg.append("g").attr("class", "viewport");
@@ -407,12 +415,11 @@
   // ---------- 5. Navigation ----------
 
   function onNodeClick(d) {
-    // Clicking the focus itself zooms out one level.
-    if (d === focus) {
-      selectNode(d);
-      if (focus.parent) goTo(focus.parent);
-      return;
-    }
+    // Clicking the focused circle itself does nothing — keep the current focus.
+    // (Going "up" only happens when clicking OUTSIDE the focus circle; see the
+    // SVG background handler in init().)
+    if (d === focus) return;
+
     const r = relationTo(d);
     if (r === 1) {
       selectNode(d);
