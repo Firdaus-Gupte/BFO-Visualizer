@@ -53,7 +53,7 @@
 
   // ---------- 2. State ----------
 
-  let scope = "BFO"; // "BFO" = BFO only, "ALL" = BFO + CCO
+  let scope = "ALL"; // "BFO" = BFO only, "ALL" = BFO + CCO (default: full hierarchy)
   let root = null; // d3 hierarchy root for the current scope
   let focus = null; // currently focused node
   let selected = null; // node shown in the info panel
@@ -64,8 +64,64 @@
   // D3 selections (assigned during build)
   let svg, viewport, nodeG, circles, labels, badges;
 
-  // ---------- D3 layout helpers ----------
-  const pack = d3.pack().size([DIAM, DIAM]).padding(6);
+  // ---------- Compressed circle-packing layout (readability) ----------
+  // Tunables for the recursive compressed pack. d3.pack() sizes a circle by the
+  // area needed to hold its ENTIRE subtree, so a class with many (hidden)
+  // descendants — e.g. `Act` — dwarfs sibling peers like `Cause`. For a
+  // progressive-disclosure learner's view we instead compress each child's
+  // radius sublinearly and enforce a floor, so immediate siblings read as
+  // conceptual peers. Descendant count still influences size, just gently.
+  const LEAF_R = 24; // base radius of a leaf circle (pre-scale)
+  const PACK_PAD = 7; // gap between siblings / inner margin
+  const COMPRESS = 0.55; // sublinear exponent: child radius ∝ (subtree size)^COMPRESS
+  const MIN_CHILD_R = 13; // floor so small siblings never collapse to nothing
+  const MIN_LABEL_RADIUS = 26; // on-screen radius (viewBox units) below which a label is hidden
+
+  // Compute a compressed layout, writing d.x / d.y / d.r on every hierarchy
+  // node (same fields d3.pack would set, so zoomTo and everything downstream are
+  // unchanged). Built from the public helpers d3.packSiblings / d3.packEnclose.
+  function computeLayout(rootNode) {
+    // Pass 1 (bottom-up): give every node a "natural" radius (_nat) and, for
+    // internal nodes, each child's enclosing-relative position + compressed
+    // display radius (_cr). Compression is applied at EVERY level, so siblings
+    // stay within a bounded size ratio throughout the tree.
+    function measure(d) {
+      if (!d.children || !d.children.length) {
+        d._nat = LEAF_R;
+        return;
+      }
+      d.children.forEach(measure);
+      // Pack largest-first for a tidy arrangement.
+      const ordered = d.children.slice().sort((a, b) => b._nat - a._nat);
+      const circles = ordered.map((c) => {
+        c._cr = Math.max(MIN_CHILD_R, LEAF_R * Math.pow(c._nat / LEAF_R, COMPRESS));
+        return { r: c._cr + PACK_PAD, ref: c };
+      });
+      d3.packSiblings(circles);
+      const enc = d3.packEnclose(circles);
+      circles.forEach((c) => {
+        c.ref._relx = c.x - enc.x;
+        c.ref._rely = c.y - enc.y;
+      });
+      d._nat = enc.r + PACK_PAD;
+    }
+    measure(rootNode);
+
+    // Pass 2 (top-down): assign absolute coordinates. `scale` shrinks a subtree
+    // so it fits the compressed slot its parent allotted it.
+    function place(d, cx, cy, scale) {
+      d.x = cx;
+      d.y = cy;
+      d.r = d._nat * scale;
+      if (!d.children) return;
+      d.children.forEach((c) => {
+        const childScale = scale * (c._cr / c._nat);
+        place(c, cx + c._relx * scale, cy + c._rely * scale, childScale);
+      });
+    }
+    // Normalize so the root fills DIAM, centered on the viewBox origin (0, 0).
+    place(rootNode, 0, 0, DIAM / 2 / rootNode._nat);
+  }
 
   // Manual pan/zoom (secondary to click-to-zoom). Applied as a transform on the
   // viewport <g>; reset to identity whenever we navigate to a new focus.
@@ -154,12 +210,22 @@
   // Rebuild the hierarchy for the current scope and (re)render all nodes.
   // `keepFocusId` keeps the same focus if that class still exists.
   function buildAndRender(keepFocusId) {
+    // Stop any in-flight transitions so old (BFO-only) nodes and new (BFO+CCO)
+    // nodes can't briefly animate on top of each other (the "smear" artifact).
+    svg.interrupt().interrupt("view");
+    if (nodeG) {
+      nodeG.interrupt();
+      circles.interrupt();
+      labels.interrupt();
+      badges.interrupt();
+    }
+
     const filtered = filterTree(rawData);
     const h = d3
       .hierarchy(filtered)
       .sum(() => 1)
       .sort((a, b) => b.value - a.value);
-    pack(h);
+    computeLayout(h);
     root = h;
 
     // Assign a color index, pre-wrapped label lines, and id lookup for each node.
@@ -181,8 +247,14 @@
       .append("g")
       .attr("class", "node");
 
+    // New nodes start fully transparent. Otherwise they'd render at the SVG
+    // default opacity (1) and then animate down to their target (0 for the many
+    // hidden descendants), flashing a smear of overlapping circles/labels/badges
+    // for the whole transition. Starting at 0 means only nodes that SHOULD be
+    // visible fade in.
     enter
       .append("circle")
+      .style("opacity", 0)
       .on("click", (event, d) => {
         event.stopPropagation();
         onNodeClick(d);
@@ -199,8 +271,12 @@
         hideTooltip();
       });
 
-    enter.append("text").attr("class", "node-label");
-    enter.append("text").attr("class", "cco-badge").text("CCO");
+    enter.append("text").attr("class", "node-label").style("opacity", 0);
+    enter
+      .append("text")
+      .attr("class", "cco-badge")
+      .text("CCO")
+      .style("opacity", 0);
 
     nodeG = enter.merge(sel);
     circles = nodeG.select("circle");
@@ -247,25 +323,34 @@
     );
     circles.attr("r", (d) => d.r * k);
 
-    // Size labels only for the focus's direct children (the only visible ones).
+    // LABEL visibility is separate from CIRCLE visibility: a grandchild circle
+    // may show faintly with no label. Label only the focus's immediate children,
+    // and only when the circle is big enough to fit readable text. Everything
+    // else is hidden outright (display:none) so no stale text can smear.
     labels.each(function (d) {
-      if (relationTo(d) !== 1) return;
-      const r = d.r * k;
+      const sel = d3.select(this);
+      const r = d.r * k; // on-screen radius (viewBox units)
+      if (relationTo(d) !== 1 || r <= MIN_LABEL_RADIUS) {
+        sel.attr("display", "none");
+        return;
+      }
       const maxLen = Math.max.apply(null, d._lines.map((s) => s.length));
       // Fit by width, but clamp so large circles don't get giant text.
       let fs = Math.min(r * 0.32, (2 * r * 0.8) / (maxLen * 0.6), 44);
-      fs = Math.max(fs, 6);
-      d3.select(this)
-        .attr("font-size", fs)
-        .attr("display", fs < 7 ? "none" : null);
+      fs = Math.max(fs, 7);
+      sel.attr("display", null).attr("font-size", fs);
     });
 
-    // Position CCO badges near the top of their circle.
+    // CCO badges follow the same rule (immediate CCO children, big enough only).
     badges.each(function (d) {
-      if (relationTo(d) !== 1 || d.data.source !== "CCO") return;
+      const sel = d3.select(this);
       const r = d.r * k;
-      const fs = Math.max(7, Math.min(13, r * 0.16));
-      d3.select(this).attr("font-size", fs).attr("y", -r * 0.62);
+      if (relationTo(d) !== 1 || d.data.source !== "CCO" || r <= MIN_LABEL_RADIUS) {
+        sel.attr("display", "none");
+        return;
+      }
+      const fs = Math.max(8, Math.min(13, r * 0.16));
+      sel.attr("display", null).attr("font-size", fs).attr("y", -r * 0.62);
     });
   }
 
@@ -341,6 +426,9 @@
     updateBreadcrumbs();
     updateFocusDisplay();
     applyStyles();
+    // Enforce label/badge visibility rules immediately (before the animation),
+    // so labels from the previous focus don't linger during the zoom.
+    zoomTo(currentView);
 
     // Reset any manual pan/zoom instantly, then animate the view.
     svg.call(zoomBehavior.transform, d3.zoomIdentity);
