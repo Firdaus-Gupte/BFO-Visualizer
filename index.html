@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BFO / CCO Visualizer</title>
+
+    <!-- Google font: a clean modern sans-serif. Falls back to system fonts offline. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- ===================== Top bar ===================== -->
+    <header id="topbar">
+      <div class="topbar-left">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          BFO / CCO Visualizer
+        </div>
+
+        <!-- Breadcrumb path: Entity > Continuant > ... -->
+        <nav id="breadcrumbs" aria-label="Ontology path"></nav>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Search -->
+        <div class="search-wrap">
+          <input
+            id="search-input"
+            type="text"
+            placeholder="Search classes…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <ul id="search-results" hidden></ul>
+        </div>
+
+        <!-- BFO-only vs BFO+CCO toggle -->
+        <div class="toggle" id="scope-toggle" role="group" aria-label="Ontology scope">
+          <button data-scope="BFO" class="active">BFO only</button>
+          <button data-scope="ALL">BFO + CCO</button>
+        </div>
+
+        <button id="reset-btn" class="icon-btn" title="Reset to Entity">Reset</button>
+        <button id="info-btn" class="icon-btn" title="Toggle info panel">Info</button>
+      </div>
+    </header>
+
+    <!-- ===================== Stage ===================== -->
+    <main id="stage">
+      <!-- Current focus label, shown prominently above the diagram -->
+      <div id="focus-display">
+        <span id="focus-name">entity</span>
+        <span id="focus-source" class="source-badge">BFO</span>
+      </div>
+
+      <!-- The D3 circle-packing visualization renders here -->
+      <svg id="viz" role="img" aria-label="Ontology circle-packing diagram"></svg>
+
+      <!-- Minimal hover tooltip -->
+      <div id="tooltip" hidden></div>
+
+      <!-- Hint shown at the bottom -->
+      <div id="hint">Click a circle to zoom in · click the background to zoom out</div>
+    </main>
+
+    <!-- ===================== Info panel ===================== -->
+    <aside id="info-panel" hidden aria-label="Class information">
+      <button id="info-close" class="icon-btn" title="Close">✕</button>
+      <div id="info-content"></div>
+    </aside>
+
+    <!-- ===================== Scripts ===================== -->
+    <!-- D3 from CDN (only external dependency; used for circle packing + transitions). -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+    <!-- Data: the full extracted ontology (sets window.REAL_ONTOLOGY) and a
+         small hand-curated fallback (sets window.SAMPLE_ONTOLOGY). app.js picks
+         REAL_ONTOLOGY if present, otherwise SAMPLE_ONTOLOGY. -->
+    <script src="sample-data.js"></script>
+    <script src="ontology-data.js"></script>
+
+    <!-- The application logic. -->
+    <script src="app.js"></script>
+  </body>
+</html>
