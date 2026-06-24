@@ -1,5 +1,7 @@
 # BFO / CCO Visualizer
 
+Click [here](https://firdaus-gupte.github.io/BFO-Visualizer/) to use the tool.
+
 A clean, beautiful, **pedagogical** browser for exploring the
 [Basic Formal Ontology (BFO)](https://basic-formal-ontology.org/) and the
 [Common Core Ontologies (CCO)](https://github.com/CommonCoreOntology/CommonCoreOntologies), built using Claude Code.
