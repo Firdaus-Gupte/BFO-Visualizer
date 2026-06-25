@@ -41,18 +41,18 @@ Click [here](https://firdaus-gupte.github.io/BFO-Visualizer/) to use the tool.
 
 ## Features currently implemented
 
-- [x] Zoomable circle-packing hierarchy with smooth animated transitions
-- [x] Progressive disclosure (focus + children + faint grandchildren only)
-- [x] Click-to-zoom, background-click / breadcrumb / Reset to zoom out
-- [x] Leaf classes open the info panel instead of zooming
-- [x] Shared pastel color per sibling group
-- [x] BFO (solid) vs CCO (dashed + badge) styling
-- [x] Manual pan & wheel-zoom (secondary to guided click-to-zoom)
-- [x] Hover enlarge/glow + minimal tooltip
-- [x] Full-ontology search (label / id / definition) with jump-to-class
-- [x] Info panel: label, source, identifier/IRI, definition, examples,
+- Zoomable circle-packing hierarchy with smooth animated transitions
+- Progressive disclosure (focus + children + faint grandchildren only)
+- Click-to-zoom, background-click / breadcrumb / Reset to zoom out
+- Leaf classes open the info panel instead of zooming
+- Shared pastel color per sibling group
+- BFO (solid) vs CCO (dashed + badge) styling
+- Manual pan & wheel-zoom (secondary to guided click-to-zoom)
+- Hover enlarge/glow + minimal tooltip
+- Full-ontology search (label / id / definition) with jump-to-class
+- Info panel: label, source, identifier/IRI, definition, examples,
       parent, subclasses, OWL restrictions
-- [x] BFO-only / BFO + CCO scope toggle
+- BFO-only / BFO + CCO scope toggle
 
 ---
 
